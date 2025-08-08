@@ -1,33 +1,35 @@
 import tcod
+import numpy as np
 
 from engine.entity import Entity
 from engine import game_map
 from engine.procgen import generate_dungeon
+from tcod.map import compute_fov
 
 SCREEN_WIDTH = 80
 SCREEN_HEIGHT = 50
 MAX_ROOMS = 30
 ROOM_MIN_SIZE = 6
 ROOM_MAX_SIZE = 10
-
+FOV_RADIUS = 8 #
 
 def main():
-    # generate dungeon and initial room list
-    game_map, rooms = generate_dungeon(
+    # generate dungeon and room list
+    dungeon, rooms = generate_dungeon(
         map_width=SCREEN_WIDTH,
         map_height=SCREEN_HEIGHT,
         max_rooms=MAX_ROOMS,
         room_min_size=ROOM_MIN_SIZE,
         room_max_size=ROOM_MAX_SIZE
     )
-    
-    # player in the first room's center
+
+    # place player at center of first room
     player_x, player_y = rooms[0].center()
-    player = Entity(player_x, player_y, "@", (255, 255, 255))
+    player = Entity(player_x, player_y, "@", (255, 255, 0)) # adjust player color
     entities = [player]
 
     tileset = tcod.tileset.load_tilesheet(
-        "static/dejavu10x10_gs_tc.png",
+        "../dejavu10x10_gs_tc.png",  # adjust this path if needed
         32,
         8,
         tcod.tileset.CHARMAP_TCOD,
@@ -43,18 +45,28 @@ def main():
         console = tcod.Console(SCREEN_WIDTH, SCREEN_HEIGHT, order="F")
 
         while True:
-            console.clear()
+            # compute fvo before rendering
+            dungeon.visible[:] = compute_fov(
+                transparency=np.vectorize(lambda t: t.transparent)(dungeon.tiles),
+                pov=(player.x, player.y),
+                radius=FOV_RADIUS,
+                light_walls=True,
+            )
+            dungeon.explored |= dungeon.visible  # mark seen tiles
 
-            # draw the map
-            game_map.render(console)
+            console.clear() # don't leave trail
 
-            # draw entities
+            # render map based on FOV
+            dungeon.render(console)
+
+            # draw visible entities
             for entity in entities:
-                console.print(x=entity.x, y=entity.y, string=entity.char, fg=entity.color)
+                if dungeon.visible[entity.x, entity.y]:
+                    console.print(x=entity.x, y=entity.y, string=entity.char, fg=entity.color)
 
             context.present(console)
 
-            # Handle input
+            # handle input
             for event in tcod.event.wait():
                 if event.type == "QUIT":
                     raise SystemExit()
@@ -73,7 +85,7 @@ def main():
                     dest_x = player.x + dx
                     dest_y = player.y + dy
 
-                    if game_map.is_walkable(dest_x, dest_y):
+                    if dungeon.is_walkable(dest_x, dest_y):
                         player.move(dx, dy)
 
 if __name__ == "__main__":
