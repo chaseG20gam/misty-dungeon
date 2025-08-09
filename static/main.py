@@ -3,17 +3,32 @@ import numpy as np
 
 from engine.entity import Entity
 from engine import game_map
-from engine.procgen import generate_dungeon
+from engine.procgen import *
 from tcod.map import compute_fov
 
+# screen constants
 SCREEN_WIDTH = 80
-SCREEN_HEIGHT = 50
+SCREEN_HEIGHT = 57
+
+# floor atributes
+panel_width = SCREEN_WIDTH
+
+# window constants
+PANEL_HEIGHT = 7
+PANEL_Y = SCREEN_HEIGHT - PANEL_HEIGHT
+
+# room constants
 MAX_ROOMS = 30
 ROOM_MIN_SIZE = 6
 ROOM_MAX_SIZE = 10
-FOV_RADIUS = 8 #
+
+#fov constants
+FOV_RADIUS = 8
 
 def main():
+    # define current floor
+    current_floor = 1
+
     # generate dungeon and room list
     dungeon, rooms = generate_dungeon(
         map_width=SCREEN_WIDTH,
@@ -41,8 +56,9 @@ def main():
         tileset=tileset,
         title="Misty Dungeon",
         vsync=True,
-    ) as context:
+    ) as context: # add windows here
         console = tcod.Console(SCREEN_WIDTH, SCREEN_HEIGHT, order="F")
+        panel = tcod.Console(panel_width, PANEL_HEIGHT, order="F")
 
         while True:
             # compute fvo before rendering
@@ -52,8 +68,6 @@ def main():
                 radius=FOV_RADIUS,
                 light_walls=True,
             )
-            dungeon.explored |= dungeon.visible  # mark seen tiles
-
             console.clear() # don't leave trail
 
             # render map based on FOV
@@ -63,6 +77,15 @@ def main():
             for entity in entities:
                 if dungeon.visible[entity.x, entity.y]:
                     console.print(x=entity.x, y=entity.y, string=entity.char, fg=entity.color)
+
+            dungeon.explored |= dungeon.visible  # mark seen tiles
+
+            panel.clear()
+            panel.print(1, 1, f"floor: {current_floor}", fg=(255, 255, 255))
+            panel.print(1, 3, f"HP: 100/100", fg=(255, 0, 0))
+            panel.print(1, 5, "Placeholder", fg=(200, 200, 200))
+
+            panel.blit(console, 0, PANEL_Y)
 
             context.present(console)
 
@@ -87,6 +110,19 @@ def main():
 
                     if dungeon.is_walkable(dest_x, dest_y):
                         player.move(dx, dy)
+            
+            if dungeon.tiles[player_x][player_y] == tile_types.stairs:
+
+                current_floor += 1
+                dungeon, rooms = generate_dungeon(
+                    map_width=SCREEN_WIDTH,
+                    map_height=SCREEN_HEIGHT,
+                    max_rooms=MAX_ROOMS,
+                    room_min_size=ROOM_MIN_SIZE,
+                    room_max_size=ROOM_MAX_SIZE
+                )
+                player_x, player_y = rooms[0].center()
+
 
 if __name__ == "__main__":
     main()

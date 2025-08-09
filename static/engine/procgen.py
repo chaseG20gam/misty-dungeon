@@ -1,6 +1,7 @@
 import random
 from .game_map import GameMap
 from .tile import Tile
+from . import tile_types
 
 
 class Rect:
@@ -26,18 +27,19 @@ class Rect:
 
 def create_tunnel_x(game_map, x1, x2, y):
     for x in range(min(x1, x2), max(x1, x2) + 1):
-        game_map.tiles[x][y] = Tile(True, True, dark=(0,0,0), light=(180,180,180))
+        game_map.tiles[x][y] = Tile(True, True, dark=(60, 40, 20), light=(160, 110, 60)) # walkable tiles properties
 
 
 def create_tunnel_y(game_map, y1, y2, x):
     for y in range(min(y1, y2), max(y1, y2) + 1):
-        game_map.tiles[x][y] = Tile(True, True, dark=(0,0,0), light=(180,180,180))
+        game_map.tiles[x][y] = Tile(True, True, dark=(60, 40, 20), light=(160, 110, 60)) # walkable tiles properties
 
 
 def carve_room(game_map, room):
     for x in range(room.x1 + 1, room.x2):
         for y in range(room.y1 + 1, room.y2):
-            game_map.tiles[x][y] = Tile(True, True, dark=(0,0,0), light=(180,180,180))
+            game_map.tiles[x][y] = Tile(True, True, dark=(60, 40, 20), light=(160, 110, 60)) # walkable tiles properties
+
 
 
 def generate_dungeon(map_width, map_height, max_rooms, room_min_size, room_max_size):
@@ -69,5 +71,8 @@ def generate_dungeon(map_width, map_height, max_rooms, room_min_size, room_max_s
                 create_tunnel_x(game_map, prev_x, new_x, new_y)
 
         rooms.append(new_room)
+
+    stairs_x, stairs_y = rooms[-1].center()
+    game_map.tiles[stairs_x][stairs_y] = tile_types.stairs
 
     return game_map, rooms

@@ -13,3 +13,10 @@ wall = Tile(
     dark=(0, 0, 100),
     light=(130, 110, 50),
 )
+
+stairs = Tile(
+    walkable=True,
+    transparent=True,
+    dark=(0, 0, 150),
+    light=(50, 50, 250),
+)
