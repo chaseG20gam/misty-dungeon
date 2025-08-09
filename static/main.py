@@ -8,7 +8,7 @@ from tcod.map import compute_fov
 
 # screen constants
 SCREEN_WIDTH = 80
-SCREEN_HEIGHT = 57
+SCREEN_HEIGHT = 60
 
 # floor atributes
 panel_width = SCREEN_WIDTH
@@ -22,8 +22,47 @@ MAX_ROOMS = 30
 ROOM_MIN_SIZE = 6
 ROOM_MAX_SIZE = 10
 
+# map constants
+MAP_HEIGHT = SCREEN_HEIGHT - PANEL_HEIGHT
+MAP_WIDTH = SCREEN_WIDTH
+
 #fov constants
 FOV_RADIUS = 8
+
+def next_floor_popup (context, console, question, options=('yes', 'no')):
+    width = max(len(question), max(len(opt) for opt in options)) + 4
+    height = len(options) + 4
+    x = (SCREEN_WIDTH - width) // 2
+    y = (SCREEN_HEIGHT - height) // 2
+
+    # new temporary console for the pop up
+    panel = tcod.Console(width, height, order='F')
+    panel.clear(bg=(0, 0, 0))
+    panel.print_box(0, 0, width, 1, question, fg=(255, 255, 255), bg=(50, 50, 50), alignment=tcod.CENTER)
+
+    selected = 0
+    while True:
+        # print options
+        for i, opt in enumerate(options):
+            fg=(255, 255, 0) if i == selected else (200, 200, 200)
+            panel.print(2, 2 + i, opt, fg=fg)
+
+        panel.blit(console, x, y)
+        context.present(console)
+
+        # input
+        for event in tcod.event.wait():
+            if event.type == 'QUIT':
+                raise SystemExit()
+            elif event.type == 'KEYDOWN':
+                if event.sym in (tcod.event.K_UP, tcod.event. K_w):
+                    selected = (selected - 1) % len(options)
+                elif event.sym in (tcod.event.K_DOWN, tcod.event. K_s):
+                    selected = (selected - 1) % len(options)
+                elif event.sym in (tcod.event.K_RETURN, tcod.event. K_KP_ENTER):
+                    return options[selected]
+                elif event.sym == tcod.event.K_ESCAPE:
+                    return 'no'
 
 def main():
     # define current floor
@@ -32,7 +71,7 @@ def main():
     # generate dungeon and room list
     dungeon, rooms = generate_dungeon(
         map_width=SCREEN_WIDTH,
-        map_height=SCREEN_HEIGHT,
+        map_height=MAP_HEIGHT,
         max_rooms=MAX_ROOMS,
         room_min_size=ROOM_MIN_SIZE,
         room_max_size=ROOM_MAX_SIZE
@@ -83,7 +122,7 @@ def main():
             panel.clear()
             panel.print(1, 1, f"floor: {current_floor}", fg=(255, 255, 255))
             panel.print(1, 3, f"HP: 100/100", fg=(255, 0, 0))
-            panel.print(1, 5, "Placeholder", fg=(200, 200, 200))
+            panel.print(1, 5, f"placeholder", fg=(200, 200, 200))
 
             panel.blit(console, 0, PANEL_Y)
 
@@ -111,17 +150,20 @@ def main():
                     if dungeon.is_walkable(dest_x, dest_y):
                         player.move(dx, dy)
             
-            if dungeon.tiles[player_x][player_y] == tile_types.stairs:
-
-                current_floor += 1
-                dungeon, rooms = generate_dungeon(
-                    map_width=SCREEN_WIDTH,
-                    map_height=SCREEN_HEIGHT,
-                    max_rooms=MAX_ROOMS,
-                    room_min_size=ROOM_MIN_SIZE,
-                    room_max_size=ROOM_MAX_SIZE
-                )
-                player_x, player_y = rooms[0].center()
+            if dungeon.tiles[player.x][player.y].name_id == 'stairs':
+                choice = next_floor_popup(context, console, 'Proceed to next flor?')
+                if choice == 'yes':
+                    current_floor += 1
+                    dungeon, rooms = generate_dungeon(
+                        map_width=SCREEN_WIDTH,
+                        map_height=SCREEN_HEIGHT,
+                        max_rooms=MAX_ROOMS,
+                        room_min_size=ROOM_MIN_SIZE,
+                        room_max_size=ROOM_MAX_SIZE
+                    )
+                    nx, ny = rooms[0].center()
+                    player.x, player.y = nx, ny
+                    entities = [player]
 
 
 if __name__ == "__main__":

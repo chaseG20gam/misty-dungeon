@@ -5,6 +5,7 @@ floor = Tile(
     transparent=True,
     dark=(50, 50, 150),
     light=(200, 180, 50),
+    name_id='floor'
 )
 
 wall = Tile(
@@ -12,11 +13,13 @@ wall = Tile(
     transparent=False,
     dark=(0, 0, 100),
     light=(130, 110, 50),
+    name_id='wall'
 )
 
 stairs = Tile(
     walkable=True,
     transparent=True,
     dark=(0, 0, 150),
-    light=(50, 50, 250),
+    light=(44, 44, 44),
+    name_id='stairs'
 )
