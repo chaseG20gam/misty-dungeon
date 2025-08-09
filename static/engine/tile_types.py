@@ -23,3 +23,11 @@ stairs = Tile(
     light=(44, 44, 44),
     name_id='stairs'
 )
+
+water = Tile(
+    walkable=False,
+    transparent=True,
+    dark=(0, 0, 80),
+    light=(0, 0, 200),
+    name_id='water'
+)

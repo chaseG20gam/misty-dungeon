@@ -99,6 +99,8 @@ def main():
         console = tcod.Console(SCREEN_WIDTH, SCREEN_HEIGHT, order="F")
         panel = tcod.Console(panel_width, PANEL_HEIGHT, order="F")
 
+        prev_player_pos = (player.x, player.y) # track previous player position
+
         while True:
             # compute fvo before rendering
             dungeon.visible[:] = compute_fov(
@@ -143,20 +145,24 @@ def main():
                     elif event.sym == tcod.event.K_RIGHT:
                         dx = 1
 
-                    # move only into walkable tiles
                     dest_x = player.x + dx
                     dest_y = player.y + dy
 
                     if dungeon.is_walkable(dest_x, dest_y):
+                        prev_player_pos = (player.x, player.y)  # track previous position
                         player.move(dx, dy)
-            
-            if dungeon.tiles[player.x][player.y].name_id == 'stairs':
-                choice = next_floor_popup(context, console, 'Proceed to next flor?')
+
+            # only show popup if player just moved onto stairs
+            if (
+                dungeon.tiles[player.x][player.y].name_id == 'stairs'
+                and prev_player_pos != (player.x, player.y)
+            ):
+                choice = next_floor_popup(context, console, 'Proceed to next floor?')
                 if choice == 'yes':
                     current_floor += 1
                     dungeon, rooms = generate_dungeon(
                         map_width=SCREEN_WIDTH,
-                        map_height=SCREEN_HEIGHT,
+                        map_height=MAP_HEIGHT,
                         max_rooms=MAX_ROOMS,
                         room_min_size=ROOM_MIN_SIZE,
                         room_max_size=ROOM_MAX_SIZE
@@ -164,6 +170,9 @@ def main():
                     nx, ny = rooms[0].center()
                     player.x, player.y = nx, ny
                     entities = [player]
+                else:
+                    # popup doesn't repeat, softlock fixed
+                    prev_player_pos = (player.x, player.y)
 
 
 if __name__ == "__main__":
