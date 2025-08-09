@@ -3,6 +3,7 @@ import numpy as np
 from .game_map import GameMap
 from .tile import Tile
 from . import tile_types
+from .items import create_water_sandals, create_sword
 
 
 class Rect:
@@ -92,7 +93,7 @@ def is_room_connected(game_map, entrances):
                 stack.append((nx, ny))
     return all(e in visited for e in entrances)
 
-def add_water_pond(game_map, room, max_pond_size=12):
+def add_water_pond(game_map, room, max_pond_size=15):
     # start pond 
     edge_choices = []
     # collect possible starting points for ponds to generate
@@ -136,7 +137,7 @@ def add_water_pond(game_map, room, max_pond_size=12):
             game_map.tiles[x][y] = tile
 
 
-def add_water_pond_anywhere(game_map, max_pond_size=20, attempts=3):
+def add_water_pond_anywhere(game_map, max_pond_size=25, attempts=5):
     for _ in range(attempts):
         # pick a random tunnel or wall edge location
         x = random.randint(1, game_map.width - 2)
@@ -204,7 +205,27 @@ def add_water_pond_on_tunnel_edges(game_map, max_pond_size=20, attempts=8):
             )
 
 
-def generate_dungeon(map_width, map_height, max_rooms, room_min_size, room_max_size):
+def place_items(game_map, rooms, picked_up_items=None):
+    picked_up_items = picked_up_items or set()
+    items = []
+    available_rooms = rooms[1:]  # skip first room (player spawn)
+    
+    # place water sandals only if not picked up before
+    if available_rooms and "Water Walking Sandals" not in picked_up_items:
+        room = random.choice(available_rooms)
+        x, y = room.center()
+        items.append(create_water_sandals(x, y))
+        available_rooms.remove(room)
+    
+    # place other items
+    if available_rooms:
+        room = random.choice(available_rooms)
+        x, y = room.center()
+        items.append(create_sword(x, y))
+    
+    return items
+
+def generate_dungeon(map_width, map_height, max_rooms, room_min_size, room_max_size, picked_up_items=None):
     game_map = GameMap(map_width, map_height)
     rooms = []
 
@@ -237,14 +258,17 @@ def generate_dungeon(map_width, map_height, max_rooms, room_min_size, room_max_s
 
         rooms.append(new_room)
 
-    # find all floor tiles
+    # find all floor tiles, add stairs randomly and prevent them to spawn over water
     floor_tiles = [(x, y) for x in range(game_map.width) for y in range(game_map.height)
                    if game_map.tiles[x][y].name_id == 'floor']
     stairs_x, stairs_y = random.choice(floor_tiles)
     game_map.tiles[stairs_x][stairs_y] = tile_types.stairs
 
     # add ponds in tunnels and at edges
-    # add_water_pond_anywhere(game_map, max_pond_size=20, attempts=5)
-    add_water_pond_on_tunnel_edges(game_map, max_pond_size=25, attempts=10)
+    add_water_pond_anywhere(game_map, max_pond_size=20, attempts=5)
+    add_water_pond_on_tunnel_edges(game_map, max_pond_size=25, attempts=15)
 
-    return game_map, rooms
+    # place items after dungeon generation
+    items = place_items(game_map, rooms, picked_up_items)
+    
+    return game_map, rooms, items
